@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="一年戦争100問">
+<meta name="theme-color" content="#1f4fa8">
+<title>一年戦争100問</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: 作戦ブリーフィング端末 — 上に戦況バー、中央に1問ずつのカード、下に操作。一覧モードで全問を見渡せる */
+:root{
+  --bg:#eef0f2; --panel:#ffffff; --ink:#151a22; --muted:#5b6574; --line:#d3d8df;
+  --blue:#1f4fa8; --red:#c62828; --yellow:#e8b100; --ok:#2e7d4f; --ng:#b3261e;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1319; --panel:#181e27; --ink:#e8ecf2; --muted:#9aa5b5; --line:#2b3442;
+  --blue:#6f9bf0; --red:#ef6b63; --yellow:#f2c53d; --ok:#5fc48a; --ng:#f07a72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1319; --panel:#181e27; --ink:#e8ecf2; --muted:#9aa5b5; --line:#2b3442;
+  --blue:#6f9bf0; --red:#ef6b63; --yellow:#f2c53d; --ok:#5fc48a; --ng:#f07a72; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;padding:0 16px}
+.wrap{max-width:720px;margin:0 auto;padding-block:28px 48px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.stripe{display:flex;height:6px;border-radius:2px;overflow:hidden;width:96px}
+.stripe i{flex:1}.stripe i:nth-child(1){background:var(--blue)}.stripe i:nth-child(2){background:var(--red)}.stripe i:nth-child(3){background:var(--yellow)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--muted)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);line-height:1.15;margin:0;text-wrap:balance}
+.lead{margin:0;color:var(--muted);font-size:14px}
+.tabs,.cats{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.status{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.status div{border-top:2px solid var(--line);padding-top:6px}
+.status b{display:block;font-size:22px}
+.status span{font-size:11px;letter-spacing:.1em;color:var(--muted)}
+.status .o{border-color:var(--ok)}.status .x{border-color:var(--ng)}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue);transition:width .3s}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px 22px;display:flex;flex-direction:column;gap:16px;min-height:280px}
+.qmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tag{border:1px solid currentColor;border-radius:4px;padding:1px 6px;font-family:var(--body)}
+.q{font-size:clamp(19px,4.6vw,23px);font-weight:700;line-height:1.55;margin:0;text-wrap:pretty}
+.ans{border-top:1px dashed var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.ans .a{font-family:var(--display);font-weight:400;font-size:clamp(20px,5vw,26px);color:var(--red);line-height:1.35}
+.ans .n{font-size:14px;color:var(--muted)}
+.reveal{margin-top:auto;align-self:stretch;background:var(--blue);color:#fff;border:0;border-radius:8px;padding:14px;font-weight:700;font-size:16px}
+.judge{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.judge button{border:2px solid;border-radius:8px;padding:12px;font-weight:700;background:transparent}
+.judge .ok{border-color:var(--ok);color:var(--ok)}.judge .ng{border-color:var(--ng);color:var(--ng)}
+.nav{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:14px}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.row .no{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px;font-variant-numeric:tabular-nums}
+.row p{margin:0}
+.row .ra{color:var(--red);font-weight:700}
+.row .ra span{color:var(--muted);font-weight:400;font-size:13px}
+.done{text-align:center;gap:10px;justify-content:center}
+.done .big{font-family:var(--display);font-size:56px;color:var(--blue);line-height:1}
+footer{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="stripe"><i></i><i></i><i></i></div>
+    <div class="eyebrow">U.C.0079 — 0080 / 一問一答</div>
+    <h1>一年戦争100問</h1>
+    <p class="lead">TV版『機動戦士ガンダム』（1979）と劇場版三部作から。問題を読んで答えを思い浮かべ、「答えを見る」で確認。〇か×かは自己申告です。</p>
+  </header>
+
+  <div class="tabs" role="group" aria-label="モード">
+    <button class="chip" id="m-quiz" aria-pressed="true">1問ずつ</button>
+    <button class="chip" id="m-list" aria-pressed="false">一覧で見る</button>
+  </div>
+  <div class="cats" id="cats" role="group" aria-label="ジャンル"></div>
+
+  <section id="quiz">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="status">
+        <div><b id="s-pos">1/100</b><span>進行</span></div>
+        <div class="o"><b id="s-ok">0</b><span>正解</span></div>
+        <div class="x"><b id="s-ng">0</b><span>不正解</span></div>
+      </div>
+      <div class="bar"><i id="bar" style="width:0"></i></div>
+      <article class="card" id="card"></article>
+      <div class="nav">
+        <button class="ghost" id="prev">← 前へ</button>
+        <button class="ghost" id="shuffle">シャッフルして最初から</button>
+        <button class="ghost" id="retry">×だけ解き直す</button>
+        <button class="ghost" id="next">次へ →</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="list" hidden><div class="list" id="listBody"></div></section>
+
+  <footer>内容は放送当時の設定・劇中描写に基づいています。後年の作品で設定が変わった項目もあります。</footer>
+</div>
+
+<script>
+const Q=[
+// [ジャンル, 問題, 答え, 補足]
+["作品","『機動戦士ガンダム』のTV放送が始まったのは何年？","1979年","4月7日放送開始。"],
+["作品","TVシリーズは全何話？","全43話","当初の予定より短縮されて終了しました。"],
+["作品","制作局はどこ？","名古屋テレビ","テレビ朝日系列で放送されました。"],
+["作品","総監督を務めたのは誰？","富野喜幸（現・富野由悠季）",""],
+["作品","キャラクターデザインを担当したのは誰？","安彦良和","アニメーションディレクター（作画監督）も兼任。"],
+["作品","メカニックデザインを担当したのは誰？","大河原邦男",""],
+["作品","アニメーション制作会社は？","日本サンライズ","現在のサンライズ（バンダイナムコフィルムワークス）。"],
+["作品","TV版の音楽を担当した二人は？","渡辺岳夫と松山祐士",""],
+["作品","TV版オープニング主題歌のタイトルは？","「翔べ!ガンダム」",""],
+["作品","「翔べ!ガンダム」を歌ったのは誰？","池田鴻",""],
+["作品","TV版エンディング主題歌のタイトルは？","「永遠にアムロ」",""],
+["作品","劇場版第2作のサブタイトルは？","哀・戦士編","1981年公開。"],
+["作品","劇場版第3作のサブタイトルは？","めぐりあい宇宙（そら）編","1982年公開。"],
+["作品","劇場版第1作の主題歌「砂の十字架」を歌ったのは誰？","やしきたかじん",""],
+["作品","劇場版『哀・戦士編』と『めぐりあい宇宙編』の主題歌を歌ったのは誰？","井上大輔","「哀 戦士」「めぐりあい」の2曲。"],
+["作品","TV版第1話のタイトルは？","「ガンダム大地に立つ!!」",""],
+["作品","TV版最終話（第43話）のタイトルは？","「脱出」",""],
+["世界観","ジオン公国が地球連邦に独立戦争を挑んだのは宇宙世紀何年？","宇宙世紀0079年","これが「一年戦争」の始まり。"],
+["世界観","一年戦争の終戦協定が結ばれたのはいつ？","宇宙世紀0080年1月1日","月面都市グラナダで締結。"],
+["世界観","開戦から1か月ほどで、人類の総人口はどれくらい失われた？","約半数",""],
+["世界観","コロニーを地球に落とすジオンの作戦の名前は？","ブリティッシュ作戦","狙いはジャブローでしたが、コロニーはオーストラリアのシドニーに落ちました。"],
+["世界観","ジオン公国はどのサイドにある？","サイド3","月の裏側に位置します。"],
+["世界観","物語が始まるコロニーはどのサイドにある？","サイド7","ガンダムの最終テストが行われていました。"],
+["世界観","中立を宣言しているコロニー群はどこ？","サイド6",""],
+["世界観","レーダーや無線を妨害する粒子の名前は？","ミノフスキー粒子","この粒子のせいで有視界の白兵戦＝モビルスーツが主役になりました。"],
+["世界観","宇宙に適応し、高い感応力を持つとされる新しい人類を何と呼ぶ？","ニュータイプ","ジオン・ダイクンが提唱した思想がもと。"],
+["世界観","地球連邦軍の本部がある場所は？","ジャブロー","南米アマゾン流域の地下にあります。"],
+["世界観","マ・クベが守っていた、ジオンの鉱山基地がある地域は？","オデッサ","連邦軍の大規模反攻作戦の舞台に。"],
+["世界観","ドズル・ザビが司令を務めた宇宙要塞は？","ソロモン",""],
+["世界観","連邦軍が占領したあと、ソロモンにつけられた名前は？","コンペイトウ","形が金平糖に似ているから。"],
+["世界観","一年戦争最後の決戦が行われた宇宙要塞は？","ア・バオア・クー",""],
+["世界観","ギレンがコロニー「マハル」を改造して作った巨大レーザー兵器は？","ソーラ・レイ",""],
+["世界観","開戦初期、連邦とジオンの艦隊が激突しジオンが大勝した会戦は？","ルウム戦役","この戦いでレビル将軍が捕虜になりました。"],
+["人物","主人公の名前は？","アムロ・レイ",""],
+["人物","物語開始時のアムロの年齢は？","15歳",""],
+["人物","ガンダムの開発責任者でもあるアムロの父は？","テム・レイ","宇宙に放り出され、のちに酸素欠乏症に。"],
+["人物","地球で暮らしていたアムロの母の名前は？","カマリア・レイ",""],
+["人物","アムロの隣に住む幼なじみの女の子は？","フラウ・ボゥ",""],
+["人物","アムロのペットロボットの名前は？","ハロ","アムロの手作り。"],
+["人物","ホワイトベースの艦長（代理）を務めた若い士官は？","ブライト・ノア","当時19歳。"],
+["人物","ホワイトベースの操舵を担当する女性は？","ミライ・ヤシマ",""],
+["人物","皮肉屋でガンキャノンに乗る少年は？","カイ・シデン",""],
+["人物","柔道が得意で、ガンタンクやガンキャノンに乗った少年は？","ハヤト・コバヤシ",""],
+["人物","コア・ファイターで特攻し、ホワイトベースを救った大柄な兵士は？","リュウ・ホセイ",""],
+["人物","ホワイトベースに乗る3人の子どもの名前は？","カツ、レツ、キッカ",""],
+["人物","ホワイトベースに乗り込んだ、ジオン・ダイクンの娘は？","セイラ・マス","本名はアルテイシア・ソム・ダイクン。"],
+["人物","カイが心を通わせたジオンのスパイの少女は？","ミハル・ラトキエ",""],
+["人物","補給部隊でホワイトベースを支え、黒い三連星との戦いで戦死した女性士官は？","マチルダ・アジャン中尉","補給機ミデアに乗っていました。"],
+["人物","マチルダの婚約者で、ジャブロー防衛戦で戦死した技術士官は？","ウッディ大尉",""],
+["人物","ソロモン戦後に合流し、ビグ・ザムに挑んで戦死した中尉は？","スレッガー・ロウ",""],
+["人物","マグネット・コーティングを考案し、ガンダムの反応速度を上げた技術者は？","モスク・ハン",""],
+["人物","「ジオンに兵なし」の演説で連邦の士気を高めた将軍は？","レビル将軍","ルウムで捕まった後、脱出して行った演説。"],
+["人物","シャア・アズナブルの本名は？","キャスバル・レム・ダイクン",""],
+["人物","シャアの異名は？","赤い彗星","ルウム戦役で戦艦5隻を沈めた戦果から。"],
+["人物","シャアとセイラの父で、ジオン共和国の建国者は？","ジオン・ズム・ダイクン",""],
+["人物","幼いシャアが地球で使っていた名前は？","エドワウ・マス",""],
+["人物","ジオン公国の公王は？","デギン・ソド・ザビ",""],
+["人物","ジオン公国軍の総帥で、ザビ家の長男は？","ギレン・ザビ",""],
+["人物","宇宙攻撃軍を率いる、ザビ家の次男は？","ドズル・ザビ",""],
+["人物","突撃機動軍を率いる、ザビ家の長女は？","キシリア・ザビ",""],
+["人物","北米を任された、ザビ家の末っ子は？","ガルマ・ザビ","シャアとは士官学校の同期。"],
+["人物","ガルマが戦死したのはどの都市？","ニューヤーク","シャアの策略でホワイトベースに体当たりして散りました。"],
+["人物","「青い巨星」と呼ばれた歴戦のジオン軍人は？","ランバ・ラル",""],
+["人物","ランバ・ラルの内縁の妻は？","クラウレ・ハモン",""],
+["人物","ジェットストリームアタックで知られる「黒い三連星」の3人は？","ガイア、オルテガ、マッシュ",""],
+["人物","黒い三連星のうち、最初にガンダムに倒されたのは？","マッシュ",""],
+["人物","オデッサ基地の司令で、骨董品の壺を愛する将校は？","マ・クベ",""],
+["人物","シャアが見出した、強いニュータイプ能力を持つ少女は？","ララァ・スン",""],
+["人物","軍を脱走し、孤島で戦災孤児と暮らしていたジオン兵は？","ククルス・ドアン","第15話「ククルス・ドアンの島」に登場。"],
+["人物","ギレン・ザビを射殺したのは誰？","キシリア・ザビ","ア・バオア・クーの指揮所で。"],
+["人物","デギン公王の乗る艦隊を消し去ったのは？","ギレンが撃たせたソーラ・レイ",""],
+["MS・兵器","ガンダムの型式番号は？","RX-78-2",""],
+["MS・兵器","連邦軍がガンダムなどを開発した計画の名前は？","V作戦",""],
+["MS・兵器","ガンダムの装甲材は？","ルナ・チタニウム合金","ザクのマシンガンを受けても平気でした。"],
+["MS・兵器","ガンダムの腹部に収まり、脱出機にもなる小型戦闘機は？","コア・ファイター","この仕組みを「コア・ブロック・システム」と呼びます。"],
+["MS・兵器","両肩にキャノン砲を持つ中距離支援MSは？","ガンキャノン","型式番号RX-77-2。"],
+["MS・兵器","下半身がキャタピラの長距離支援MSは？","ガンタンク","型式番号RX-75。"],
+["MS・兵器","ガンダムをもとにした連邦軍の量産型MSは？","ジム","型式番号RGM-79。"],
+["MS・兵器","ジオンの主力量産MS「ザクII」の型式番号は？","MS-06","シャア専用機はMS-06S。"],
+["MS・兵器","シャア専用ザクは通常の何倍の速さと言われた？","3倍",""],
+["MS・兵器","ランバ・ラルが乗った、ヒートロッドを持つ青いMSは？","グフ","型式番号MS-07B。"],
+["MS・兵器","黒い三連星が乗った、ホバー走行する重MSは？","ドム","型式番号MS-09。"],
+["MS・兵器","ジャブロー攻略でシャアが乗った赤い水陸両用MSは？","ズゴック（シャア専用）","型式番号MSM-07S。"],
+["MS・兵器","丸っこい体でジャブローに潜入した水陸両用MSは？","アッガイ",""],
+["MS・兵器","シャアが終盤に乗った、ジオン後期の量産型MSは？","ゲルググ","シャア専用機は赤いMS-14S。"],
+["MS・兵器","ア・バオア・クーでシャアが乗った、脚のないMSは？","ジオング","型式番号MSN-02。"],
+["MS・兵器","ジオングを見たシャアに、整備兵が「脚は〇〇です」と言った。〇〇は？","飾り","「偉い人にはそれがわからん」と続きます。"],
+["MS・兵器","ララァが乗った、ビットで遠隔攻撃するモビルアーマーは？","エルメス",""],
+["MS・兵器","ドズル・ザビがソロモンで乗った巨大モビルアーマーは？","ビグ・ザム",""],
+["MS・兵器","ガンダムが鎖つきの鉄球で戦った武器の名前は？","ガンダム・ハンマー",""],
+["MS・兵器","ホワイトベースの艦種は？","ペガサス級強襲揚陸艦",""],
+["MS・兵器","ジオン兵がホワイトベースにつけたあだ名は？","木馬","形が馬に見えたから。"],
+["MS・兵器","シャアが序盤に乗っていたジオンの軽巡洋艦の級名は？","ムサイ級",""],
+["MS・兵器","連邦軍の主力戦艦の級名は？","マゼラン級","巡洋艦はサラミス級。"],
+["名場面","アムロが初めてガンダムを動かしたとき、手にしていたのは？","ガンダムのマニュアル","父のデータを読みながら操縦しました。"],
+["名場面","ブライトに殴られたアムロが口にした、「〇〇にもぶたれたことないのに」の〇〇は？","親父",""],
+["名場面","ガルマの死について、シャアがギレンの演説を見ながら言った言葉は「〇〇だからさ」。〇〇は？","坊や",""],
+["名場面","ララァが命を落とした原因は？","ガンダムの攻撃からシャアのゲルググをかばった","第41話「光る宇宙」。"],
+["名場面","最終決戦でガンダムは頭と片腕を失った状態で、何を撃ち抜いた？","ジオングの頭部","通称「ラストシューティング」。"],
+["名場面","ランバ・ラルはどのように最期を迎えた？","手榴弾で自爆した","ホワイトベース艦内での白兵戦の末に。"]
+];
+
+const CATS=["すべて","作品","世界観","人物","MS・兵器","名場面"];
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let st=store.get("g100")||{};
+let cat=st.cat||"すべて", order=st.order||null, pos=st.pos||0, marks=st.marks||{}, shown=false, mode="quiz";
+
+function pool(){return Q.map((q,i)=>i).filter(i=>cat==="すべて"||Q[i][0]===cat)}
+function setOrder(ids){order=ids;pos=0;shown=false;save();render()}
+if(!order||!order.every(i=>Q[i])) order=pool();
+function save(){store.set("g100",{cat,order,pos,marks})}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderCats(){
+  $("cats").innerHTML=CATS.map(c=>{const n=c==="すべて"?Q.length:Q.filter(q=>q[0]===c).length;
+    return `<button class="chip" data-c="${c}" aria-pressed="${c===cat}">${c} ${n}</button>`}).join("");
+}
+$("cats").onclick=e=>{const b=e.target.closest("button");if(!b)return;cat=b.dataset.c;renderCats();setOrder(pool());renderList()};
+
+function render(){
+  const ids=order, total=ids.length;
+  const ok=ids.filter(i=>marks[i]===1).length, ng=ids.filter(i=>marks[i]===0).length;
+  $("s-ok").textContent=ok;$("s-ng").textContent=ng;
+  $("s-pos").textContent=Math.min(pos+1,total)+"/"+total;
+  $("bar").style.width=(total?(ok+ng)/total*100:0)+"%";
+  const card=$("card");
+  if(pos>=total){
+    card.className="card done";
+    card.innerHTML=`<div class="eyebrow">作戦終了</div><div class="big">${ok}<small style="font-size:22px"> / ${total}</small></div>
+      <p style="margin:0">${ok===total?"完璧です。ニュータイプの素養ありですね。":ng?"×の問題だけ解き直して、全問正解を目指しましょう。":"お疲れさまでした。"}</p>`;
+    return;
+  }
+  card.className="card";
+  const i=ids[pos], q=Q[i], m=marks[i];
+  card.innerHTML=`<div class="qmeta"><span>Q.${String(i+1).padStart(3,"0")}</span><span class="tag">${q[0]}</span></div>
+    <p class="q">${esc(q[1])}</p>
+    ${shown?`<div class="ans"><div class="a">${esc(q[2])}</div>${q[3]?`<div class="n">${esc(q[3])}</div>`:""}</div>
+      <div class="judge"><button class="ok" id="j1">〇 正解</button><button class="ng" id="j0">× 不正解</button></div>`
+     :`${m!==undefined?`<div class="n" style="color:var(--muted);font-size:13px">前回：${m?"〇":"×"}</div>`:""}<button class="reveal" id="rv">答えを見る</button>`}`;
+  if(shown){$("j1").onclick=()=>judge(1);$("j0").onclick=()=>judge(0);$("j1").focus()}
+  else $("rv").onclick=()=>{shown=true;render()};
+}
+function judge(v){marks[order[pos]]=v;pos++;shown=false;save();render();renderList()}
+$("next").onclick=()=>{if(pos<order.length){pos++;shown=false;save();render()}};
+$("prev").onclick=()=>{if(pos>0){pos--;shown=false;save();render()}};
+$("shuffle").onclick=()=>{const ids=shuffle(pool());ids.forEach(i=>delete marks[i]);setOrder(ids);renderList()};
+$("retry").onclick=()=>{const ids=pool().filter(i=>marks[i]===0);if(!ids.length){$("retry").textContent="×はありません";setTimeout(()=>$("retry").textContent="×だけ解き直す",1500);return}
+  ids.forEach(i=>delete marks[i]);setOrder(shuffle(ids))};
+document.addEventListener("keydown",e=>{if(mode!=="quiz"||e.target.closest("button"))return;
+  if(e.key===" "&&!shown&&pos<order.length){e.preventDefault();shown=true;render()}});
+
+function renderList(){
+  $("listBody").innerHTML=pool().map(i=>{const q=Q[i];const m=marks[i];
+    return `<div class="row"><div class="no">${String(i+1).padStart(3,"0")}${m===1?" 〇":m===0?" ×":""}</div>
+      <div><p>${esc(q[1])}</p><p class="ra">${esc(q[2])}${q[3]?` <span>— ${esc(q[3])}</span>`:""}</p></div></div>`}).join("");
+}
+function setMode(m){mode=m;$("m-quiz").setAttribute("aria-pressed",m==="quiz");$("m-list").setAttribute("aria-pressed",m==="list");
+  $("quiz").hidden=m!=="quiz";$("list").hidden=m!=="list";}
+$("m-quiz").onclick=()=>setMode("quiz");$("m-list").onclick=()=>setMode("list");
+
+renderCats();render();renderList();
+</script>
+</body>
+</html>
